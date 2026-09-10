@@ -27,6 +27,7 @@ The dataset contains the following variables:
 - Pandas
 - Matplotlib
 - Scikit-learn
+- Polars
 
 ## Analysis Steps
 
@@ -130,6 +131,7 @@ python overview.py
 - `gld_price_trend.png`: GLD time-series visualization
 - `actual_vs_estimated_gld.png`: Model comparison visualization
 - `README.md`: Project documentation
+- `polars_comparison.py`: Pandas and Polars performance comparison
 
 ## Rust Ownership Experiment
 
@@ -155,3 +157,28 @@ to remain valid.
 The completed notebook is available in:
 
 `rust_vs_python_intro_modified.ipynb`
+
+## Pandas and Polars Comparison
+
+I used both Pandas and Polars to perform the same operations:
+
+- Read the CSV file
+- Convert the date column
+- Filter GLD observations above the overall average
+- Group GLD prices by year
+- Calculate summary statistics
+
+Both implementations identified 1,299 observations where GLD was above
+its overall average, confirming that they produced consistent results.
+
+I repeated the operations 100 times. The results were:
+
+- Pandas total time: 0.3972 seconds
+- Polars total time: 0.1460 seconds
+- Pandas average per run: 0.003972 seconds
+- Polars average per run: 0.001460 seconds
+- Polars was approximately 2.72 times faster in this test
+
+The dataset contains only 2,666 rows, so this result should be interpreted
+cautiously. Performance on a small dataset may be affected by file caching,
+startup costs, computer workload, and normal timing variation.
