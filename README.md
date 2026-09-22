@@ -228,3 +228,10 @@ All eight tests passed locally and in GitHub Actions, as shown below.
 ### GitHub Actions Results
 
 ![GitHub Actions results showing eight passing tests](screenshots/github-actions.png)
+
+### CI Run History
+
+The workflow completed successfully at least three times, including
+automatic runs triggered by pushes.
+
+![Successful CI workflow runs](screenshots/ci-runs.png)
