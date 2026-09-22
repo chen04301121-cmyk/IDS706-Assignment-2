@@ -2,9 +2,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, r2_score
+from gold_analysis import (
+    load_data,
+    preprocess_data,
+    filter_above_average,
+    yearly_summary,
+)
 
 # Import the dataset
-gold = pd.read_csv('gold_data_2015_25.csv')
+gold = load_data("gold_data_2015_25.csv")
 
 # Inspect the dataset
 print("First five rows:")
@@ -27,17 +33,14 @@ print(gold.dtypes) # check data types of each column
 
 # Basic Filtering and Grouping
 
-# Convert Date from text to datetime
-gold["Date"] = pd.to_datetime(gold["Date"], errors="coerce")
-
-# Create a Year column for grouping
-gold["Year"] = gold["Date"].dt.year
+# Clean data, sort observations, and add the Year column
+gold = preprocess_data(gold)
 
 # Calculate the overall average GLD price
 average_gld = gold["GLD"].mean()
 
 # Filter rows where GLD is above its overall average
-above_average = gold[gold["GLD"] > average_gld]
+above_average = filter_above_average(gold)
 
 print("\nOverall average GLD price:")
 print(round(average_gld, 2))
@@ -49,15 +52,10 @@ print("\nNumber of rows where GLD is above average:")
 print(len(above_average))
 
 # Group the data by year and calculate summary statistics
-yearly_summary = gold.groupby("Year")["GLD"].agg(
-    average_price="mean",
-    minimum_price="min",
-    maximum_price="max",
-    observation_count="count"
-)
+annual_summary = yearly_summary(gold)
 
 print("\nYearly GLD summary:")
-print(yearly_summary.round(2))
+print(annual_summary.round(2))
 
 
 # Visualization
