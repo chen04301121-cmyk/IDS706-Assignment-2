@@ -1,5 +1,7 @@
 # Gold Market Data Analysis
 
+[![Tests](https://github.com/chen04301121-cmyk/IDS706-Assignment-2/actions/workflows/tests.yml/badge.svg)](https://github.com/chen04301121-cmyk/IDS706-Assignment-2/actions/workflows/tests.yml)
+
 ## Project Overview
 
 This project explores GLD market prices from 2015 to 2025 using Python and Pandas. The analysis includes data inspection, filtering, grouping, visualization, and an introductory linear regression model.
@@ -115,7 +117,7 @@ The analysis also uses price levels, which may contain long-term trends. Additio
 Install the required libraries:
 
 ```bash
-python -m pip install pandas matplotlib scikit-learn
+python -m pip install -r requirements.txt
 ```
 
 Run the analysis:
@@ -182,3 +184,47 @@ I repeated the operations 100 times. The results were:
 The dataset contains only 2,666 rows, so this result should be interpreted
 cautiously. Performance on a small dataset may be affected by file caching,
 startup costs, computer workload, and normal timing variation.
+
+## Testing and Continuous Integration
+
+The project is tested with Python 3.12 and pytest. The test suite contains eight tests: four core functionality tests, three edge-case tests, and one complete system test.
+
+### Core Functionality Tests
+
+- Read a CSV file and verify its contents.
+- Convert dates and numeric values, sort observations, and create the Year column without modifying the original data.
+- Filter GLD prices strictly above the overall average.
+- Calculate yearly mean, minimum, maximum, and observation count.
+
+### Edge-Case Tests
+
+- Reject input files missing required columns.
+- Remove invalid dates, invalid numeric values, and duplicate rows.
+- Raise an error when no valid observations remain after preprocessing.
+
+### Complete System Test
+
+The system test runs `overview.py` with the repository dataset in a temporary directory. It verifies successful execution, checks the above-average observation count and model evaluation metrics against the documented results, and confirms that both charts are generated as readable, non-uniform images.
+
+### Run the Tests
+
+From the project root, install dependencies and run:
+
+```bash
+python -m pip install -r requirements.txt
+python -m pytest -v
+```
+
+### GitHub Actions
+
+The workflow in `.github/workflows/tests.yml` automatically installs dependencies and runs the test suite on pushes and pull requests. It also supports manual runs.
+
+All eight tests passed locally and in GitHub Actions, as shown below.
+
+### Local Test Results
+
+![Local test results showing eight passing tests](screenshots/local-tests.png)
+
+### GitHub Actions Results
+
+![GitHub Actions results showing eight passing tests](screenshots/github-actions.png)
