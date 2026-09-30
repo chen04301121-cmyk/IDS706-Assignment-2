@@ -98,3 +98,22 @@ def train_and_evaluate(data, train_fraction=0.8):
         ),
         "intercept": model.intercept_,
     }
+
+
+def calculate_daily_returns(data):
+    """Calculate price returns between consecutive trading observations."""
+    columns = ["GLD", "SPX", "USO", "SLV"]
+    ordered = data.sort_values("Date").set_index("Date")
+    prices = ordered[columns]
+
+    if len(prices) < 2:
+        raise ValueError("At least two observations are required.")
+
+    if (
+        prices.isna().any().any()
+        or prices.isin([float("inf"), float("-inf")]).any().any()
+        or (prices <= 0).any().any()
+    ):
+        raise ValueError("Prices must be finite, positive, and non-missing.")
+
+    return prices.pct_change(fill_method=None).iloc[1:]

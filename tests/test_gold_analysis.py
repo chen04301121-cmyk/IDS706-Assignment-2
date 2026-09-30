@@ -7,6 +7,7 @@ from gold_analysis import (
     filter_above_average,
     yearly_summary,
     train_and_evaluate,
+    calculate_daily_returns,
 )
 
 
@@ -173,3 +174,54 @@ def test_model_rejects_too_small_training_or_test_set(train_fraction):
 
     with pytest.raises(ValueError, match="at least two rows"):
         train_and_evaluate(data, train_fraction=train_fraction)
+
+
+def test_daily_returns_calculates_correctly_and_sorts_dates():
+    data = make_data(
+        ["2020-01-03", "2020-01-01", "2020-01-02"],
+        [99.0, 100.0, 110.0],
+    )
+    data["Date"] = pd.to_datetime(data["Date"])
+    original = data.copy(deep=True)
+
+    result = calculate_daily_returns(data)
+
+    assert result.index.tolist() == [
+        pd.Timestamp("2020-01-02"),
+        pd.Timestamp("2020-01-03"),
+    ]
+    assert result.columns.tolist() == ["GLD", "SPX", "USO", "SLV"]
+
+    # GLD moves from 100 to 110 (+10%), then to 99 (-10%).
+    assert result["GLD"].tolist() == pytest.approx([0.1, -0.1])
+
+    # The other prices are constant in this test dataset.
+    for column in ["SPX", "USO", "SLV"]:
+        assert result[column].tolist() == pytest.approx([0.0, 0.0])
+
+    pd.testing.assert_frame_equal(data, original)
+
+
+@pytest.mark.parametrize("row_count", [0, 1])
+def test_daily_returns_rejects_insufficient_data(row_count):
+    data = make_data(
+        pd.date_range("2020-01-01", periods=row_count),
+        [100.0] * row_count,
+    )
+
+    with pytest.raises(ValueError, match="At least two observations"):
+        calculate_daily_returns(data)
+
+
+@pytest.mark.parametrize(
+    "invalid_price",
+    [0.0, -1.0, float("nan"), float("inf"), float("-inf")],
+)
+def test_daily_returns_rejects_invalid_prices(invalid_price):
+    data = make_data(
+        pd.date_range("2020-01-01", periods=3),
+        [100.0, invalid_price, 110.0],
+    )
+
+    with pytest.raises(ValueError, match="finite, positive, and non-missing"):
+        calculate_daily_returns(data)

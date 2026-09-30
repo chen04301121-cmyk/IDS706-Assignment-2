@@ -9,6 +9,7 @@ from gold_analysis import (
     filter_above_average,
     yearly_summary,
     train_and_evaluate,
+    calculate_daily_returns,
 )
 
 
@@ -55,6 +56,42 @@ def plot_model_results(results, output_path):
     ax.legend()
     ax.grid(alpha=0.3)
 
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=300)
+    plt.close(fig)
+
+
+def plot_return_correlations(correlations, output_path):
+    """Save a heatmap of daily price return correlations."""
+    fig, ax = plt.subplots(figsize=(7, 6))
+    heatmap = ax.imshow(
+        correlations.to_numpy(),
+        cmap="RdBu_r",
+        vmin=-1,
+        vmax=1,
+    )
+
+    labels = correlations.columns.tolist()
+    ax.set_xticks(range(len(labels)))
+    ax.set_xticklabels(labels)
+    ax.set_yticks(range(len(labels)))
+    ax.set_yticklabels(labels)
+
+    for row in range(len(labels)):
+        for column in range(len(labels)):
+            value = correlations.iloc[row, column]
+            text_color = "white" if abs(value) >= 0.6 else "black"
+            ax.text(
+                column,
+                row,
+                f"{value:.3f}",
+                ha="center",
+                va="center",
+                color=text_color,
+            )
+
+    ax.set_title("Daily Price Return Correlations")
+    fig.colorbar(heatmap, ax=ax, label="Pearson correlation")
     fig.tight_layout()
     fig.savefig(output_path, dpi=300)
     plt.close(fig)
@@ -120,6 +157,18 @@ def main():
     print(round(results["intercept"], 3))
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
+    daily_returns = calculate_daily_returns(gold)
+    return_correlations = daily_returns.corr()
+
+    print("\nDaily return correlations:")
+    print(return_correlations.round(3))
+
+    daily_returns.to_csv(args.output_dir / "daily_returns.csv")
+    return_correlations.to_csv(args.output_dir / "daily_return_correlations.csv")
+    plot_return_correlations(
+        return_correlations,
+        args.output_dir / "daily_return_correlations.png",
+    )
     plot_price_trend(gold, args.output_dir / "gld_price_trend.png")
     plot_model_results(results, args.output_dir / "actual_vs_estimated_gld.png")
 

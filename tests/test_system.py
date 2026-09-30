@@ -5,7 +5,7 @@ import re
 import shutil
 import subprocess
 import sys
-
+import pandas as pd
 import matplotlib.image as mpimg
 import pytest
 
@@ -75,6 +75,7 @@ def test_complete_analysis_pipeline(tmp_path):
     for filename in [
         "gld_price_trend.png",
         "actual_vs_estimated_gld.png",
+        "daily_return_correlations.png",
     ]:
         image_path = tmp_path / filename
 
@@ -85,3 +86,26 @@ def test_complete_analysis_pipeline(tmp_path):
         assert image.shape[0] > 0
         assert image.shape[1] > 0
         assert image[:, :, :3].std() > 0, f"Blank chart: {filename}"
+    returns = pd.read_csv(
+        tmp_path / "daily_returns.csv",
+        index_col="Date",
+        parse_dates=["Date"],
+    )
+    correlations = pd.read_csv(
+        tmp_path / "daily_return_correlations.csv",
+        index_col=0,
+    )
+
+    source = pd.read_csv(PROJECT_ROOT / "gold_data_2015_25.csv")
+    assert len(returns) == len(source) - 1
+    assert returns.index.is_monotonic_increasing
+    assert returns.columns.tolist() == ["GLD", "SPX", "USO", "SLV"]
+    assert not returns.isna().any().any()
+
+    pd.testing.assert_frame_equal(
+        correlations,
+        returns.corr(),
+        check_exact=False,
+        atol=1e-10,
+        rtol=1e-10,
+    )

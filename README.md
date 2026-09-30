@@ -97,6 +97,34 @@ The R-squared value indicates that the model explained approximately 10% of the 
 
 ![Actual versus estimated GLD prices](actual_vs_estimated_gld.png)
 
+## Additional Analysis: Daily Price Returns
+
+The original analysis examines price levels, which may share long-term trends. This extension investigates whether GLD, SPX, USO, and SLV also move together between consecutive trading observations.
+
+Price returns are calculated as:
+
+```text
+Return = (Current price / Previous price) - 1
+```
+
+Observations are sorted by date before calculation. The first observation is excluded because it has no preceding price. These are price-change returns; dividends are not separately incorporated.
+
+![Daily price return correlations](daily_return_correlations.png)
+
+The Pearson correlations with GLD are:
+
+| Variable | Correlation with GLD |
+|----------|---------------------|
+| SLV | 0.761 |
+| USO | 0.089 |
+| SPX | 0.046 |
+
+GLD and SLV show a strong positive association in their daily price changes. GLD has much weaker linear associations with SPX and USO over the full sample.
+
+These results describe contemporaneous relationships, not causation or forecasting performance. Full-period correlations can also conceal changes across market conditions.
+
+The script exports `daily_returns.csv` and `daily_return_correlations.csv`, allowing the calculations behind the chart to be inspected.
+
 ## Main Findings
 
 - GLD displayed an overall upward trend between 2015 and 2025.
@@ -123,7 +151,7 @@ python -m pip install -r requirements.txt
 Run the analysis:
 
 ```bash
-python overview.py
+python3 overview.py --output-dir outputs
 ```
 
 ## Files
@@ -187,7 +215,47 @@ startup costs, computer workload, and normal timing variation.
 
 ## Testing and Continuous Integration
 
-The project is tested with Python 3.12 and pytest. The test suite contains eight tests: four core functionality tests, three edge-case tests, and one complete system test.
+The project uses Python 3.12 and pytest. All 23 test cases passed locally after the refactoring and daily return analysis were added.
+
+### Test Coverage
+
+- CSV loading and required-column validation.
+- Data conversion, chronological sorting, duplicate removal, and invalid-data handling.
+- Above-average filtering and yearly summary statistics.
+- Model predictions on a dataset with a known linear relationship.
+- Chronological training/test splitting and preservation of input data.
+- Invalid split ratios and insufficient training or test observations.
+- Daily return calculations using known percentage changes.
+- Insufficient observations and missing, infinite, zero, or negative prices.
+- An end-to-end run checking the original model metrics, three readable non-blank charts, and two CSV outputs.
+- Agreement between exported correlations and correlations recalculated from the exported returns.
+
+### Run Checks Locally
+
+Install dependencies:
+
+```bash
+python3 -m pip install -r requirements-dev.txt
+```
+
+Check formatting and code quality:
+
+```bash
+python3 -m black --check overview.py gold_analysis.py polars_comparison.py tests
+python3 -m flake8 overview.py gold_analysis.py polars_comparison.py tests
+```
+
+Run tests:
+
+```bash
+python3 -m pytest -v
+```
+
+### GitHub Actions
+
+The workflow in `.github/workflows/tests.yml` runs automatically on pushes and pull requests and also supports manual execution. It installs development dependencies, checks formatting with Black, runs flake8, and executes pytest.
+
+The CI status badge at the top of this README links to workflow results.
 
 ### Core Functionality Tests
 
@@ -263,12 +331,15 @@ The volume mount saves generated charts to the local `outputs/docker` directory:
 
 - `gld_price_trend.png`
 - `actual_vs_estimated_gld.png`
+- `daily_return_correlations.png`
+- `daily_returns.csv`
+- `daily_return_correlations.csv`
 
 The container exits after the analysis finishes. The `--rm` option removes the container afterward, while the charts remain in the local output directory.
 
 ### Verification and Learning
 
-I built the image locally and ran a named container, `gold-analysis-check`. Its status was `Exited (0)`, indicating successful completion, and both chart files were saved to the mounted directory on my Mac.
+I rebuilt the image after adding the daily return analysis and ran a named container, `gold-analysis-updated-check`. Its status was `Exited (0)`, indicating successful completion. Three charts and two CSV files were saved to the mounted directory, `outputs/docker-updated`, on my Mac.
 
 I practiced pulling a base image, building and running a project image, listing images with `docker images`, and checking container status with `docker ps -a`. I learned how a volume mount preserves analysis outputs outside the container.
 
@@ -279,3 +350,48 @@ I practiced pulling a base image, building and running a project image, listing 
 <img src="screenshots/docker-run.png" alt="Container exited successfully and generated both chart files" width="750">
 
 <img src="screenshots/docker-outputs.png" alt="Chart files generated by the container" width="750">
+
+## Data Cleaning and Outlier Policy
+
+The input dataset contains 2,666 observations. Initial inspection found no missing values or duplicate rows.
+
+The preprocessing function:
+
+- Checks required columns when loading the CSV.
+- Converts dates and numeric fields, treating invalid values as missing.
+- Removes rows with missing values in required columns.
+- Removes duplicate rows and sorts observations chronologically.
+- Raises an error if no valid observations remain.
+
+Daily return calculation additionally rejects missing, infinite, zero, or negative prices and requires at least two observations.
+
+The analysis does not automatically remove extreme but valid price observations or returns. Large changes may contain relevant market information, so magnitude alone is not used as a deletion criterion. However, individual extreme observations have not been independently verified against the original market data, and this remains a limitation. The reported correlations use the retained observations without trimming or winsorization.
+
+The 2025 sample contains only 153 observations and should not be treated as a complete calendar year.
+
+## Refactoring and Code Quality
+
+The analysis was reorganized to separate reusable calculations, visualization, and script execution.
+
+- Model training and evaluation were extracted into `train_and_evaluate()` in `gold_analysis.py`.
+- Plotting was separated into dedicated functions.
+- A `main()` function and an execution guard prevent the analysis from running automatically when the module is imported.
+- Command-line arguments configure the input CSV and output directory.
+- Figures are saved and closed, supporting automated and containerized execution.
+- Black standardizes formatting, and flake8 checks Python code.
+
+These changes make individual calculations easier to test and allow the same analysis to run locally or in Docker.
+
+Verification included 23 passing local tests, preservation of the original rounded model metrics (MAE 31.27 and R² 0.10), and successful execution of the updated Docker image. The container exited with code 0 and generated three charts and two CSV files.
+
+The earlier refactoring commit is available [here](https://github.com/chen04301121-cmyk/IDS706-Assignment-2/commit/00940fe).
+
+### Refactoring Evidence
+
+The following screenshots show the extraction of plotting logic, removal of inline model training, and import of the reusable model function.
+
+<img src="screenshots/refactoring-plot-function.png" alt="Plotting logic extracted into a function" width="750">
+
+<img src="screenshots/refactoring-model-before.png" alt="Original inline model training removed from overview.py" width="750">
+
+<img src="screenshots/refactoring-imports.png" alt="Reusable model function imported into overview.py" width="750">
