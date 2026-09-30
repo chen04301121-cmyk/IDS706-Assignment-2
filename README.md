@@ -138,7 +138,7 @@ The script exports `daily_returns.csv` and `daily_return_correlations.csv`, allo
 
 This model uses variables observed on the same trading day, so it estimates or explains contemporaneous GLD prices rather than forecasting future prices.
 
-The analysis also uses price levels, which may contain long-term trends. Additional analysis could examine daily returns, volatility, lagged variables, and nonlinear machine-learning algorithms.
+The regression uses price levels, which may contain long-term trends. The additional daily return analysis examines short-term co-movement but does not establish causation or predictive ability. Future work could examine rolling correlations, volatility, lagged variables, and nonlinear models.
 
 ## How to Run the Project
 
@@ -153,6 +153,7 @@ Run the analysis:
 ```bash
 python3 overview.py --output-dir outputs
 ```
+The command saves three charts and two CSV files to the outputs directory.
 
 ## Files
 
@@ -257,52 +258,6 @@ The workflow in `.github/workflows/tests.yml` runs automatically on pushes and p
 
 The CI status badge at the top of this README links to workflow results.
 
-### Core Functionality Tests
-
-- Read a CSV file and verify its contents.
-- Convert dates and numeric values, sort observations, and create the Year column without modifying the original data.
-- Filter GLD prices strictly above the overall average.
-- Calculate yearly mean, minimum, maximum, and observation count.
-
-### Edge-Case Tests
-
-- Reject input files missing required columns.
-- Remove invalid dates, invalid numeric values, and duplicate rows.
-- Raise an error when no valid observations remain after preprocessing.
-
-### Complete System Test
-
-The system test runs `overview.py` with the repository dataset in a temporary directory. It verifies successful execution, checks the above-average observation count and model evaluation metrics against the documented results, and confirms that both charts are generated as readable, non-uniform images.
-
-### Run the Tests
-
-From the project root, install dependencies and run:
-
-```bash
-python -m pip install -r requirements.txt
-python -m pytest -v
-```
-
-### GitHub Actions
-
-The workflow in `.github/workflows/tests.yml` automatically installs dependencies and runs the test suite on pushes and pull requests. It also supports manual runs.
-
-All eight tests passed locally and in GitHub Actions, as shown below.
-
-### Local Test Results
-
-![Local test results showing eight passing tests](screenshots/local-tests.png)
-
-### GitHub Actions Results
-
-![GitHub Actions results showing eight passing tests](screenshots/github-actions.png)
-
-### CI Run History
-
-The workflow completed successfully at least three times, including
-automatic runs triggered by pushes.
-
-![Successful CI workflow runs](screenshots/ci-runs.png)
 
 ## Docker
 
