@@ -16,10 +16,7 @@ def run_pandas():
     average_gld = df["GLD"].mean()
     above_average = df[df["GLD"] > average_gld]
 
-    yearly_summary = (
-        df.groupby("Year")["GLD"]
-        .agg(["mean", "min", "max", "count"])
-    )
+    yearly_summary = df.groupby("Year")["GLD"].agg(["mean", "min", "max", "count"])
 
     return above_average, yearly_summary
 
@@ -29,23 +26,13 @@ def run_polars():
 
     df = pl.read_csv(FILE_PATH)
 
-    df = df.with_columns(
-        pl.col("Date")
-        .str.to_date("%Y-%m-%d")
-        .alias("Date")
-    )
+    df = df.with_columns(pl.col("Date").str.to_date("%Y-%m-%d").alias("Date"))
 
-    df = df.with_columns(
-        pl.col("Date")
-        .dt.year()
-        .alias("Year")
-    )
+    df = df.with_columns(pl.col("Date").dt.year().alias("Year"))
 
     average_gld = df["GLD"].mean()
 
-    above_average = df.filter(
-        pl.col("GLD") > average_gld
-    )
+    above_average = df.filter(pl.col("GLD") > average_gld)
 
     yearly_summary = (
         df.group_by("Year")

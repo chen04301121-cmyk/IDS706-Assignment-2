@@ -6,6 +6,7 @@ from gold_analysis import (
     preprocess_data,
     filter_above_average,
     yearly_summary,
+    train_and_evaluate,
 )
 
 
@@ -13,14 +14,16 @@ def make_data(dates, prices):
     """Create small, predictable data for testing."""
     size = len(dates)
 
-    return pd.DataFrame({
-        "Date": dates,
-        "SPX": [2000.0] * size,
-        "GLD": prices,
-        "USO": [50.0] * size,
-        "SLV": [15.0] * size,
-        "EUR/USD": [1.1] * size,
-    })
+    return pd.DataFrame(
+        {
+            "Date": dates,
+            "SPX": [2000.0] * size,
+            "GLD": prices,
+            "USO": [50.0] * size,
+            "SLV": [15.0] * size,
+            "EUR/USD": [1.1] * size,
+        }
+    )
 
 
 def test_load_data_reads_csv(tmp_path):
@@ -69,19 +72,24 @@ def test_filter_above_average_excludes_equal_values():
 
 
 def test_yearly_summary_calculates_each_year():
-    data = pd.DataFrame({
-        "Year": [2020, 2020, 2021],
-        "GLD": [100.0, 200.0, 300.0],
-    })
+    data = pd.DataFrame(
+        {
+            "Year": [2020, 2020, 2021],
+            "GLD": [100.0, 200.0, 300.0],
+        }
+    )
 
     result = yearly_summary(data)
 
-    expected = pd.DataFrame({
-        "average_price": [150.0, 300.0],
-        "minimum_price": [100.0, 300.0],
-        "maximum_price": [200.0, 300.0],
-        "observation_count": [2, 1],
-    }, index=pd.Index([2020, 2021], name="Year"))
+    expected = pd.DataFrame(
+        {
+            "average_price": [150.0, 300.0],
+            "minimum_price": [100.0, 300.0],
+            "maximum_price": [200.0, 300.0],
+            "observation_count": [2, 1],
+        },
+        index=pd.Index([2020, 2021], name="Year"),
+    )
 
     pd.testing.assert_frame_equal(result, expected)
 
@@ -120,3 +128,48 @@ def test_preprocess_rejects_all_invalid_data():
 
     with pytest.raises(ValueError, match="No valid rows"):
         preprocess_data(data)
+
+
+def test_model_predicts_linear_data_in_chronological_order():
+    """Verify known predictions and keep the latest dates for testing."""
+    dates = pd.date_range("2020-01-01", periods=10)
+    data = make_data(dates, [2 * value + 10 for value in range(10)])
+    data["SPX"] = list(range(10))
+
+    # Shuffle input to verify that the function sorts before splitting.
+    data = data.sample(frac=1, random_state=42).reset_index(drop=True)
+    original = data.copy(deep=True)
+
+    result = train_and_evaluate(data)
+
+    assert result["train_count"] == 8
+    assert result["test_count"] == 2
+    assert result["test_dates"].tolist() == dates[-2:].tolist()
+    assert result["actual"].tolist() == [26, 28]
+    assert result["predictions"] == pytest.approx([26, 28])
+    assert result["mae"] == pytest.approx(0, abs=1e-8)
+    assert result["r_squared"] == pytest.approx(1)
+
+    pd.testing.assert_frame_equal(data, original)
+
+
+@pytest.mark.parametrize("train_fraction", [-0.1, 0, 1, 1.1])
+def test_model_rejects_invalid_train_fraction(train_fraction):
+    data = make_data(
+        pd.date_range("2020-01-01", periods=10),
+        list(range(100, 110)),
+    )
+
+    with pytest.raises(ValueError, match="train_fraction"):
+        train_and_evaluate(data, train_fraction=train_fraction)
+
+
+@pytest.mark.parametrize("train_fraction", [0.1, 0.9])
+def test_model_rejects_too_small_training_or_test_set(train_fraction):
+    data = make_data(
+        pd.date_range("2020-01-01", periods=10),
+        list(range(100, 110)),
+    )
+
+    with pytest.raises(ValueError, match="at least two rows"):
+        train_and_evaluate(data, train_fraction=train_fraction)

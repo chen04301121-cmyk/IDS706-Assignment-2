@@ -9,7 +9,6 @@ import sys
 import matplotlib.image as mpimg
 import pytest
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -38,9 +37,7 @@ def test_complete_analysis_pipeline(tmp_path):
 
     # The entire script must finish successfully.
     assert result.returncode == 0, (
-        f"Analysis failed.\n"
-        f"STDOUT:\n{result.stdout}\n"
-        f"STDERR:\n{result.stderr}"
+        f"Analysis failed.\n" f"STDOUT:\n{result.stdout}\n" f"STDERR:\n{result.stderr}"
     )
 
     # Check the filtering result recorded for this dataset.
